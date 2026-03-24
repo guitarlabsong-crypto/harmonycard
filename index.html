@@ -2,244 +2,202 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SYM Guitar Lab Singing Test</title>
     <style>
-        /* 게임 화면 배경 및 전체 톤: 갈색 계열 */
+        :root {
+            --bg-color: #3e2723; /* 짙은 갈색 */
+            --card-color: #5d4037; /* 중간 갈색 */
+            --accent-color: #d7ccc8; /* 연한 베이지 */
+            --point-color: #ffccbc; /* 살구색 포인트 */
+        }
         body { 
-            text-align: center; 
-            font-family: 'Pretendard', sans-serif; 
-            background: #3e2723; /* 짙은 갈색 배경 */
-            color: #efebe9; 
-            margin: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
+            text-align: center; font-family: 'Apple SD Gothic Neo', 'Pretendard', sans-serif; 
+            background: var(--bg-color); color: #ffffff; margin: 0;
+            display: flex; align-items: center; justify-content: center; height: 100vh;
         }
         .container { 
-            background: #5d4037; /* 밝은 갈색 카드 */
-            width: 90%; 
-            max-width: 450px; 
-            padding: 40px 20px; 
-            border-radius: 30px; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.4); 
-            border: 2px solid #8d6e63;
+            background: var(--card-color); width: 85%; max-width: 400px; 
+            padding: 50px 20px; border-radius: 40px; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5); border: 1px solid #795548;
         }
-        h1 { font-size: 1.4rem; color: #d7ccc8; margin-bottom: 5px; letter-spacing: 1px; }
-        h2 { font-size: 1.8rem; color: #ffffff; margin-top: 0; margin-bottom: 30px; }
+        .brand { font-size: 1rem; color: var(--accent-color); letter-spacing: 2px; margin-bottom: 5px; }
+        .title { font-size: 2rem; font-weight: 800; margin-top: 0; margin-bottom: 40px; color: #fff; }
         
-        #level-info { font-size: 1.1rem; color: #bcaaa4; margin-bottom: 10px; }
-        #target-notes { 
-            font-size: 3rem; 
-            font-weight: bold; 
-            margin: 25px 0; 
-            color: #ffccbc; /* 살구색 포인트 */
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-            min-height: 70px; 
+        #level-display { font-size: 1.2rem; color: var(--point-color); margin-bottom: 10px; font-weight: bold; }
+        #note-display { 
+            font-size: 4rem; font-weight: 900; margin: 30px 0; 
+            color: #fff; text-shadow: 0 4px 10px rgba(0,0,0,0.3); min-height: 80px; 
         }
-        #user-note { font-size: 1.3rem; color: #ffab91; height: 30px; margin-bottom: 20px; }
+        #user-feedback { font-size: 1.1rem; color: var(--accent-color); height: 25px; margin-bottom: 30px; }
         
-        /* 버튼 디자인 */
         button { 
-            background: #8d6e63; 
-            color: white; 
-            border: none; 
-            padding: 18px 40px; 
-            border-radius: 50px; 
-            font-size: 1.2rem; 
-            font-weight: bold;
-            cursor: pointer; 
-            transition: all 0.3s;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            background: #8d6e63; color: white; border: none; padding: 20px 50px; 
+            border-radius: 50px; font-size: 1.3rem; font-weight: bold;
+            cursor: pointer; transition: 0.3s; box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
-        button:hover { background: #a1887f; }
-        button:active { transform: scale(0.95); }
-
-        .status-msg { margin-top: 25px; font-size: 1.1rem; color: #d7ccc8; }
+        button:active { transform: scale(0.95); background: #a1887f; }
+        .status { margin-top: 20px; font-size: 1rem; opacity: 0.8; }
     </style>
 </head>
 <body>
 
-<div class="container" id="game-ui">
-    <h1>SONG,YOUNG-MIN Guitar Lab</h1>
-    <h2>Singing Test</h2>
+<div class="container">
+    <div class="brand">SONG,YOUNG-MIN Guitar Lab</div>
+    <div class="title">Singing Test</div>
     
-    <div id="game-content" style="display: none;">
-        <div id="level-info">Level 1</div>
-        <div id="target-notes">준비!</div>
-        <div id="user-note">내 목소리: -</div>
-        <div class="status-msg" id="status">문제를 들려드릴게요.</div>
+    <div id="game-ui" style="display: none;">
+        <div id="level-display">Level 1</div>
+        <div id="note-display">-</div>
+        <div id="user-feedback">내 음정: 대기 중</div>
+        <div class="status" id="msg">버튼을 눌러 시작하세요.</div>
     </div>
 
-    <button id="start-btn" onclick="initGame()">START GAME</button>
+    <button id="action-btn" onclick="handleButtonClick()">START GAME</button>
 </div>
 
 <script>
-/* -----------------------------------------------------------
-   1. 다이아토닉 스케일 설정 (C Major: 도레미파솔라시)
------------------------------------------------------------ */
-// 샵(#)이나 플랫(b)을 제외한 7음만 사용합니다.
-const NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-const KOR_NOTES = ['도', '레', '미', '파', '솔', '라', '시'];
-const FREQS = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88]; // C4~B4
+/* --- 데이터 설정 (다이아토닉 C4~B4) --- */
+const NOTES = ['도', '레', '미', '파', '솔', '라', '시'];
+const FREQS = [261.63, 293.66, 329.63, 349.23, 392.00, 440.00, 493.88];
 
-let currentLevel = 1;      
-let targetSequence = [];   
-let userProgress = 0;      
-let isListening = false;   
-let audioCtx, analyser, microphone;
+let audioCtx, analyser, micStream;
+let currentLevel = 1;
+let targetSeq = [];
+let userIdx = 0;
+let isPlaying = false;
+let isListening = false;
 
-/* -----------------------------------------------------------
-   2. 게임 시작 함수
------------------------------------------------------------ */
-async function initGame() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+/* --- 메인 버튼 제어 --- */
+function handleButtonClick() {
+    if (!audioCtx) setupAudio();
+    if (!isPlaying && !isListening) {
+        document.getElementById('game-ui').style.display = 'block';
+        document.getElementById('action-btn').style.display = 'none';
+        startNewLevel();
     }
-    // 인트로 버튼 숨기고 게임 화면 표시
-    document.getElementById('start-btn').style.display = 'none';
-    document.getElementById('game-content').style.display = 'block';
-    
-    startNewLevel();
 }
 
+async function setupAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    micStream = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    micStream.connect(analyser);
+}
+
+/* --- 게임 로직 --- */
 function startNewLevel() {
-    userProgress = 0;
-    targetSequence = [];
-    document.getElementById('level-info').innerText = `Level ${currentLevel}`;
-    document.getElementById('status').innerText = "문제를 듣고 기억하세요!";
-    
-    // 현재 레벨 숫자만큼 다이아토닉 음계에서 랜덤 추출
-    for(let i=0; i < currentLevel; i++) {
-        let randomIndex = Math.floor(Math.random() * NOTES.length);
-        targetSequence.push(randomIndex);
-    }
-
-    playSequence(); 
-}
-
-/* -----------------------------------------------------------
-   3. 소리 재생 (문제 들려주기)
------------------------------------------------------------ */
-async function playSequence() {
+    userIdx = 0;
+    targetSeq = [];
     isListening = false;
-    document.getElementById('target-notes').innerText = "...";
+    document.getElementById('level-display').innerText = `Level ${currentLevel}`;
     
-    for (let i = 0; i < targetSequence.length; i++) {
-        let noteIdx = targetSequence[i];
-        // 재생 중에는 하나씩만 크게 보여줌
-        document.getElementById('target-notes').innerText = KOR_NOTES[noteIdx];
-        
-        await playTone(FREQS[noteIdx], 0.7); 
-        await new Promise(r => setTimeout(r, 250)); 
+    // 레벨만큼 랜덤 음 생성
+    for(let i=0; i<currentLevel; i++) {
+        targetSeq.push(Math.floor(Math.random() * NOTES.length));
     }
     
-    document.getElementById('target-notes').innerText = "?";
-    document.getElementById('status').innerText = "이제 똑같이 불러보세요!";
-    startListening();
+    playTarget();
 }
 
-function playTone(freq, duration) {
+async function playTarget() {
+    isPlaying = true;
+    document.getElementById('msg').innerText = "문제를 잘 듣고 기억하세요!";
+    
+    for (let i = 0; i < targetSeq.length; i++) {
+        const noteIdx = targetSeq[i];
+        document.getElementById('note-display').innerText = NOTES[noteIdx];
+        await playTone(FREQS[noteIdx]);
+        await new Promise(r => setTimeout(r, 300));
+    }
+    
+    document.getElementById('note-display').innerText = "?";
+    document.getElementById('msg').innerText = "방금 들은 음을 순서대로 부르세요!";
+    isPlaying = false;
+    isListening = true;
+    detectPitch();
+}
+
+function playTone(freq) {
     return new Promise(resolve => {
-        let osc = audioCtx.createOscillator();
-        let gain = audioCtx.createGain();
-        osc.type = 'triangle'; // 조금 더 부드러운 소리
-        osc.frequency.value = freq;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
         osc.start();
-        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
-        osc.stop(audioCtx.currentTime + duration);
-        setTimeout(resolve, duration * 1000);
+        osc.stop(audioCtx.currentTime + 0.8);
+        setTimeout(resolve, 800);
     });
 }
 
-/* -----------------------------------------------------------
-   4. 음성 분석 및 판정
------------------------------------------------------------ */
-async function startListening() {
-    if (!microphone) {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            microphone = audioCtx.createMediaStreamSource(stream);
-            analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 2048;
-            microphone.connect(analyser);
-        } catch (err) {
-            alert("마이크 권한이 필요합니다.");
-            return;
-        }
-    }
-    isListening = true;
-    checkPitch();
-}
-
-function checkPitch() {
+/* --- 음고 검출 알고리즘 (개선됨) --- */
+function detectPitch() {
     if (!isListening) return;
 
     const buffer = new Float32Array(analyser.fftSize);
     analyser.getFloatTimeDomainData(buffer);
-    const pitch = autoCorrelate(buffer, audioCtx.sampleRate);
+    
+    const pitch = getPitch(buffer, audioCtx.sampleRate);
 
     if (pitch !== -1) {
-        const noteIdx = getDiatonicIndex(pitch);
-        if (noteIdx !== -1) {
-            const noteName = KOR_NOTES[noteIdx];
-            document.getElementById('user-note').innerText = `내 목소리: ${noteName}`;
+        // 주파수를 12음계 수치로 변환
+        const midi = Math.round(12 * Math.log2(pitch / 261.63));
+        // 다이아토닉 인덱스 매핑 (도=0, 레=2, 미=4, 파=5, 솔=7, 라=9, 시=11)
+        const mapping = {0:0, 2:1, 4:2, 5:3, 7:4, 9:5, 11:6};
+        const currentNote = ((midi % 12) + 12) % 12;
 
-            // 정답 확인
-            if (noteIdx === targetSequence[userProgress]) {
-                userProgress++;
-                document.getElementById('status').innerText = `딩동댕! (${userProgress}/${currentLevel})`;
-                
-                if (userProgress >= currentLevel) {
+        if (mapping.hasOwnProperty(currentNote)) {
+            const detectedIdx = mapping[currentNote];
+            document.getElementById('user-feedback').innerText = `내 음정: ${NOTES[detectedIdx]}`;
+
+            // 정답 판정
+            if (detectedIdx === targetSeq[userIdx]) {
+                userIdx++;
+                if (userIdx >= targetSeq.length) {
                     isListening = false;
-                    currentLevel++;
+                    document.getElementById('msg').innerText = "훌륭합니다!";
                     setTimeout(() => {
-                        alert("통과! 다음 단계로 갑니다.");
+                        currentLevel++;
                         startNewLevel();
-                    }, 600);
+                    }, 1000);
                     return;
+                } else {
+                    document.getElementById('msg').innerText = `다음 음... (${userIdx}/${currentLevel})`;
                 }
             }
         }
     }
-    requestAnimationFrame(checkPitch);
+    requestAnimationFrame(detectPitch);
 }
 
-// 주파수를 다이아토닉 인덱스로 변환
-function getDiatonicIndex(frequency) {
-    // 12음계 기준으로 계산 후 다이아토닉에 해당하는지 확인
-    const semiTone = 12 * (Math.log(frequency / 261.63) / Math.log(2));
-    const totalNoteIdx = Math.round(semiTone);
-    
-    // C Major Scale 반음 간격: 0, 2, 4, 5, 7, 9, 11
-    const diatonicMapping = {0:0, 2:1, 4:2, 5:3, 7:4, 9:5, 11:6};
-    const modIdx = ((totalNoteIdx % 12) + 12) % 12;
-    
-    return diatonicMapping.hasOwnProperty(modIdx) ? diatonicMapping[modIdx] : -1;
-}
+// 주파수 추출 알고리즘 (AMDF 방식)
+function getPitch(buffer, sampleRate) {
+    let rms = 0;
+    for (let i = 0; i < buffer.length; i++) rms += buffer[i] * buffer[i];
+    if (Math.sqrt(rms / buffer.length) < 0.02) return -1; // 작은 소리 무시
 
-// 기본적인 Pitch Detection (Auto-correlation)
-function autoCorrelate(buffer, sampleRate) {
-    let sum = 0;
-    for (let i = 0; i < buffer.length; i++) sum += buffer[i] * buffer[i];
-    if (Math.sqrt(sum / buffer.length) < 0.03) return -1; // 노이즈 게이트
+    let bestScroll = -1;
+    let minDifference = Infinity;
 
-    let bestOffset = -1;
-    let bestCorrelation = 0;
-    for (let offset = 20; offset < 500; offset++) {
-        let correlation = 0;
-        for (let i = 0; i < buffer.length - offset; i++) {
-            correlation += buffer[i] * buffer[i + offset];
+    // 인간의 가창 범위 (약 80Hz ~ 1000Hz) 탐색
+    for (let scroll = 40; scroll < 500; scroll++) {
+        let difference = 0;
+        for (let i = 0; i < buffer.length - scroll; i++) {
+            difference += Math.abs(buffer[i] - buffer[i + scroll]);
         }
-        if (correlation > bestCorrelation) {
-            bestCorrelation = correlation;
-            bestOffset = offset;
+        if (difference < minDifference) {
+            minDifference = difference;
+            bestScroll = scroll;
         }
     }
-    return sampleRate / bestOffset;
+    return sampleRate / bestScroll;
 }
 </script>
 
