@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>초정밀 기억력 테스트</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --danger: #ff4757;
+            --success: #2ed573;
+            --dark: #2f3542;
+        }
+
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background: #f1f2f6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .game-header { text-align: center; margin-bottom: 20px; }
+        
+        /* 프로그레스 바 */
+        .timer-container {
+            width: 300px;
+            height: 10px;
+            background: #dfe4ea;
+            border-radius: 5px;
+            margin: 10px auto;
+            overflow: hidden;
+        }
+        #progress {
+            width: 100%;
+            height: 100%;
+            background: var(--primary);
+            transition: width 1s linear;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+        }
+
+        /* 게임 보드 */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 12px;
+            max-width: 700px;
+            perspective: 1000px;
+        }
+
+        /* 카드 스타일 */
+        .card {
+            width: 80px;
+            height: 110px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+        }
+
+        .card.flipped { transform: rotateY(180deg); }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .card-front { background: var(--dark); color: white; }
+        .card-back {
+            background: white;
+            color: var(--dark);
+            transform: rotateY(180deg);
+            border: 2px solid var(--primary);
+        }
+
+        /* 애니메이션 효과 */
+        .matched .card-back { background: var(--success); color: white; border-color: var(--success); }
+        .shake { animation: shake 0.4s; }
+        @keyframes shake {
+            0%, 100% { transform: rotateY(180deg) translateX(0); }
+            25% { transform: rotateY(180deg) translateX(-5px); }
+            75% { transform: rotateY(180deg) translateX(5px); }
+        }
+
+        #message-overlay {
+            display: none;
+            position: fixed;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            z-index: 100;
+        }
+
+        button {
+            padding: 10px 25px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-header">
+        <h1>Memory Master</h1>
+        <div class="stats">
+            <div>남은 기회: <span id="lives" style="color: var(--danger)">3</span></div>
+            <div id="status">준비!</div>
+        </div>
+        <div class="timer-container">
+            <div id="progress"></div>
+        </div>
+    </div>
+
+    <div id="game-board" class="grid"></div>
+
+    <div id="message-overlay">
+        <h2 id="msg-title">GAME OVER</h2>
+        <button onclick="initGame()">다시 도전하기</button>
+    </div>
+
+    <script>
+        const symbols = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+        let cards = [];
+        let flippedCards = [];
+        let lives = 3;
+        let canClick = false;
+        let matchedCount = 0;
+
+        const board = document.getElementById('game-board');
+        const livesDisplay = document.getElementById('lives');
+        const statusDisplay = document.getElementById('status');
+        const progressBar = document.getElementById('progress');
+        const overlay = document.getElementById('message-overlay');
+
+        function initGame() {
+            // 초기화
+            board.innerHTML = '';
+            overlay.style.display = 'none';
+            lives = 3;
+            matchedCount = 0;
+            livesDisplay.innerText = lives;
+            canClick = false;
+            flippedCards = [];
+            
+            // 카드 섞기
+            const deck = [...symbols, ...symbols].sort(() => Math.random() - 0.5);
+            
+            // 카드 생성
+            deck.forEach(symbol => {
+                const card = document.createElement('div');
+                card.className = 'card flipped'; // 처음에 보여주기 위해 flipped 추가
+                card.innerHTML = `
+                    <div class="card-face card-front">?</div>
+                    <div class="card-face card-back">${symbol}</div>
+                `;
+                card.dataset.symbol = symbol;
+                card.onclick = () => handleCardClick(card);
+                board.appendChild(card);
+            });
+
+            startCountdown();
+        }
+
+        function startCountdown() {
+            let sec = 5;
+            statusDisplay.innerText = `${sec}초 후 시작!`;
+            progressBar.style.width = '100%';
+            
+            const timer = setInterval(() => {
+                sec--;
+                progressBar.style.width = (sec / 5 * 100) + '%';
+                statusDisplay.innerText = `${sec}초 후 시작!`;
+
+                if (sec <= 0) {
+                    clearInterval(timer);
+                    statusDisplay.innerText = "찾으세요!";
+                    document.querySelectorAll('.card').forEach(c => c.classList.remove('flipped'));
+                    canClick = true;
+                }
+            }, 1000);
+        }
+
+        function handleCardClick(card) {
+            if (!canClick || card.classList.contains('flipped') || flippedCards.length >= 2) return;
+
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const [c1, c2] = flippedCards;
+            
+            if (c1.dataset.symbol === c2.dataset.symbol) {
+                // 매치 성공
+                c1.classList.add('matched');
+                c2.classList.add('matched');
+                matchedCount += 2;
+                flippedCards = [];
+                if (matchedCount === 14) endGame(true);
+            } else {
+                // 매치 실패
+                canClick = false;
+                setTimeout(() => {
+                    c1.classList.add('shake');
+                    c2.classList.add('shake');
+                    
+                    setTimeout(() => {
+                        c1.classList.remove('flipped', 'shake');
+                        c2.classList.remove('flipped', 'shake');
+                        flippedCards = [];
+                        lives--;
+                        livesDisplay.innerText = lives;
+                        canClick = true;
+                        if (lives <= 0) endGame(false);
+                    }, 500);
+                }, 300);
+            }
+        }
+
+        function endGame(isWin) {
+            canClick = false;
+            overlay.style.display = 'block';
+            document.getElementById('msg-title').innerText = isWin ? "🎉 승리했습니다!" : "👻 게임 오버!";
+            document.getElementById('msg-title').style.color = isWin ? "var(--success)" : "var(--danger)";
+        }
+
+        // 게임 시작
+        initGame();
+    </script>
+</body>
+</html>
