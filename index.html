@@ -5,150 +5,122 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SYM Guitar Lab Memory Card</title>
     <style>
+        /* [1. 디자인 설정 - 여기서 색상을 변경하세요] */
         :root {
-            --bg-color: #3e2723; /* 다크 브라운 */
-            --card-front: #5d4037;
-            --card-back: #efebe9;
-            --accent: #d4a373; /* 기타 나무 느낌의 골드 브라운 */
-            --text-light: #d7ccc8;
-            --success: #81c784;
+            --bg-dark: #2d1b10;      /* 전체 배경: 짙은 로즈우드 색상 */
+            --card-back: #4e342e;    /* 카드 뒷면: 중간 브라운 */
+            --card-front: #f5f5f5;   /* 카드 앞면: 아이보리/베이지 */
+            --point-color: #d4a373;  /* 강조색: 통기타 상판 나무색 */
+            --text-gold: #ffb300;    /* 텍스트: 금색 */
+            --success: #2ed573;      /* 맞췄을 때 색상 */
         }
-
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
         body {
             font-family: -apple-system, sans-serif;
-            background: var(--bg-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 10px;
-            color: var(--text-light);
-            min-height: 100vh;
+            background-color: var(--bg-dark); /* 전체 배경색 적용 */
+            margin: 0; padding: 10px;
+            display: flex; flex-direction: column; align-items: center;
+            color: white; min-height: 100vh;
         }
 
-        .header-title { text-align: center; margin-top: 15px; }
-        .header-title h1 { font-size: 0.9rem; color: var(--accent); margin: 0; letter-spacing: 1px; }
-        .header-title h2 { font-size: 1.6rem; color: white; margin: 5px 0; font-weight: 800; }
+        /* 제목 섹션 */
+        .header { text-align: center; margin-top: 20px; }
+        .header h1 { font-size: 0.8rem; color: var(--point-color); margin: 0; letter-spacing: 2px; }
+        .header h2 { font-size: 1.6rem; margin: 5px 0; color: white; }
 
-        .status-container {
-            width: 100%;
-            max-width: 340px;
-            display: flex;
-            justify-content: space-between;
-            background: rgba(255,255,255,0.05);
-            padding: 12px 20px;
-            border-radius: 15px;
-            margin: 15px 0;
-            border: 1px solid rgba(212, 163, 115, 0.3);
-        }
-
-        .stat-item { text-align: center; }
-        .stat-label { font-size: 0.7rem; color: var(--accent); text-transform: uppercase; display: block; }
-        .stat-value { font-size: 1.3rem; font-weight: bold; color: white; }
-
-        .timer-bar {
-            width: 100%; max-width: 340px; height: 4px;
+        /* 점수 및 상태창 */
+        .info-panel {
+            width: 100%; max-width: 350px;
+            display: flex; justify-content: space-around;
             background: rgba(255,255,255,0.1);
-            border-radius: 2px; margin-bottom: 20px; overflow: hidden;
+            padding: 15px; border-radius: 15px; margin: 15px 0;
+            border: 1px solid var(--point-color);
         }
-        #progress { width: 100%; height: 100%; background: var(--accent); transition: width 1s linear; }
+        .info-box { text-align: center; }
+        .label { font-size: 0.7rem; color: var(--point-color); display: block; margin-bottom: 5px; }
+        .value { font-size: 1.2rem; font-weight: bold; }
 
+        /* 5초 카운트다운 바 */
+        .timer-container { width: 100%; max-width: 350px; height: 5px; background: #444; margin-bottom: 20px; border-radius: 5px; overflow: hidden; }
+        #timer-bar { width: 100%; height: 100%; background: var(--point-color); transition: width 1s linear; }
+
+        /* [2. 카드 그리드 - 4열 4행 배치] */
         .grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(4, 1fr); /* 4열 */
             gap: 10px;
-            width: 100%;
-            max-width: 340px;
+            width: 100%; max-width: 350px;
         }
 
         .card {
-            aspect-ratio: 3 / 4;
+            aspect-ratio: 3 / 4; /* 카드 가로세로 비율 */
             position: relative;
             transform-style: preserve-3d;
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: transform 0.4s;
         }
 
+        /* 카드가 뒤집혔을 때 애니메이션 */
         .card.flipped { transform: rotateY(180deg); }
 
         .card-face {
-            position: absolute;
-            width: 100%; height: 100%;
+            position: absolute; width: 100%; height: 100%;
             backface-visibility: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: bold; border-radius: 8px;
         }
 
-        .card-front { background: var(--card-front); color: var(--accent); border: 1px solid #4e342e; font-size: 1.2rem; }
-        .card-back {
-            background: var(--card-back);
-            color: var(--bg-color);
-            transform: rotateY(180deg);
+        /* 카드 뒷면 (기본 상태) */
+        .card-back { background: var(--card-back); color: var(--point-color); border: 1px solid #3e2723; }
+        /* 카드 앞면 (숫자/문자 보이는 쪽) */
+        .card-front { background: var(--card-front); color: #2d1b10; transform: rotateY(180deg); }
+
+        /* 정답 맞췄을 때 효과 */
+        .matched .card-front { background: var(--success); color: white; }
+
+        /* 오버레이 (게임 종료창) */
+        #overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center;
+            z-index: 100;
         }
-
-        .matched .card-back { background: var(--success); color: white; }
-
-        #message-overlay {
-            display: none; position: fixed; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            background: #fff; color: #333;
-            width: 85%; max-width: 300px;
-            padding: 30px; border-radius: 20px;
-            text-align: center; z-index: 1000;
-        }
-
+        .modal { background: white; padding: 30px; border-radius: 20px; text-align: center; color: #333; width: 80%; max-width: 300px; }
+        
         button {
-            width: 100%; padding: 15px;
-            background: var(--accent); color: white;
-            border: none; border-radius: 10px;
-            font-size: 1.1rem; font-weight: bold; margin-top: 15px;
+            background: var(--point-color); color: white; border: none;
+            padding: 12px 25px; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <div class="header-title">
+    <div class="header">
         <h1>SONG,YOUNG MIN Guitar Lab</h1>
         <h2>Memory Card</h2>
     </div>
 
-    <div class="status-container">
-        <div class="stat-item">
-            <span class="stat-label">Misses</span>
-            <span id="miss-count" class="stat-value">0</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-label">Pairs</span>
-            <span id="pairs-count" class="stat-value">0/8</span>
-        </div>
-        <div class="stat-item">
-            <span class="stat-label">Status</span>
-            <span id="status" class="stat-value" style="font-size: 0.9rem;">Ready</span>
-        </div>
+    <div class="info-panel">
+        <div class="info-box"><span class="label">MISSES</span><span id="miss-count" class="value">0</span></div>
+        <div class="info-box"><span class="label">PAIRS</span><span id="pairs-count" class="value">0/8</span></div>
+        <div class="info-box"><span class="label">STATUS</span><span id="game-status" class="value" style="font-size:0.9rem;">Ready</span></div>
     </div>
 
-    <div class="timer-bar">
-        <div id="progress"></div>
-    </div>
+    <div class="timer-container"><div id="timer-bar"></div></div>
 
     <div id="game-board" class="grid"></div>
 
-    <div id="message-overlay">
-        <h2 id="msg-title">GAME CLEAR!</h2>
-        <p id="msg-desc">총 실수 횟수: <span id="final-miss">0</span>회</p>
-        <button onclick="initGame()">다시 도전</button>
+    <div id="overlay">
+        <div class="modal">
+            <h2 id="modal-title">Guitar Lab TEST</h2>
+            <p id="modal-desc">5초 동안 위치를 기억하세요!</p>
+            <button id="start-btn" onclick="startGame()">게임 시작</button>
+        </div>
     </div>
 
     <script>
-        // 사운드 데이터 (주파수 Hz)
+        // [3. 사운드 및 데이터 설정]
         const notes = {
             'C': 261.63, 'D': 293.66, 'E': 329.63, 'F': 349.23,
-            'G': 392.00, 'A': 440.00, 'B': 493.88, '🎼': 523.25 // 마지막은 높은 도
+            'G': 392.00, 'A': 440.00, 'B': 493.88, '🎼': 523.25
         };
 
         const symbols = Object.keys(notes);
@@ -156,78 +128,74 @@
         let misses = 0;
         let matchedPairs = 0;
         let canClick = false;
-
-        // 오디오 컨텍스트 설정
         let audioCtx = null;
 
+        // 아이폰 사운드 활성화를 위한 오디오 함수
         function playNote(symbol) {
             if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             
-            osc.type = 'sine';
+            osc.type = 'triangle'; // 부드러운 소리
             osc.frequency.setValueAtTime(notes[symbol], audioCtx.currentTime);
             
-            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.8);
             
             osc.connect(gain);
             gain.connect(audioCtx.destination);
             
             osc.start();
-            osc.stop(audioCtx.currentTime + 0.5);
+            osc.stop(audioCtx.currentTime + 0.8);
         }
 
         const board = document.getElementById('game-board');
-        const missDisplay = document.getElementById('miss-count');
-        const pairsDisplay = document.getElementById('pairs-count');
-        const statusDisplay = document.getElementById('status');
-        const progressBar = document.getElementById('progress');
-        const overlay = document.getElementById('message-overlay');
+        const timerBar = document.getElementById('timer-bar');
+
+        // [4. 게임 로직 시작]
+        function startGame() {
+            // 아이폰 사운드 활성화 (사용자 클릭 직후 호출 필요)
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            document.getElementById('overlay').style.display = 'none';
+            initGame();
+        }
 
         function initGame() {
             board.innerHTML = '';
-            overlay.style.display = 'none';
             misses = 0;
             matchedPairs = 0;
-            missDisplay.innerText = misses;
-            pairsDisplay.innerText = `0/8`;
+            document.getElementById('miss-count').innerText = misses;
+            document.getElementById('pairs-count').innerText = `0/8`;
+            document.getElementById('game-status').innerText = "Memorize";
             canClick = false;
-            flippedCards = [];
-            
+
+            // 카드 섞기
             const deck = [...symbols, ...symbols].sort(() => Math.random() - 0.5);
             
             deck.forEach(symbol => {
                 const card = document.createElement('div');
-                card.className = 'card flipped';
+                card.className = 'card flipped'; // 처음엔 앞면 보이기
                 card.innerHTML = `
-                    <div class="card-face card-front">SYM</div>
-                    <div class="card-face card-back">${symbol}</div>
+                    <div class="card-face card-back">SYM</div>
+                    <div class="card-face card-front">${symbol}</div>
                 `;
                 card.dataset.symbol = symbol;
-                card.addEventListener('click', () => handleCardClick(card));
+                card.onclick = () => handleCardClick(card);
                 board.appendChild(card);
             });
 
-            startCountdown();
-        }
-
-        function startCountdown() {
-            let sec = 5;
-            statusDisplay.innerText = "Memorize";
-            progressBar.style.transition = 'none';
-            progressBar.style.width = '100%';
-            
-            setTimeout(() => {
-                progressBar.style.transition = 'width 5s linear';
-                progressBar.style.width = '0%';
-            }, 10);
-
+            // 5초 타이머 시작
+            let timeLeft = 5;
+            timerBar.style.width = '100%';
             const timer = setInterval(() => {
-                sec--;
-                if (sec <= 0) {
+                timeLeft--;
+                timerBar.style.width = (timeLeft * 20) + '%';
+                if (timeLeft <= 0) {
                     clearInterval(timer);
-                    statusDisplay.innerText = "Play!";
+                    document.getElementById('game-status').innerText = "Find!";
                     document.querySelectorAll('.card').forEach(c => c.classList.remove('flipped'));
                     canClick = true;
                 }
@@ -252,34 +220,35 @@
             const [c1, c2] = flippedCards;
             
             if (c1.dataset.symbol === c2.dataset.symbol) {
+                // 맞췄을 때
                 c1.classList.add('matched');
                 c2.classList.add('matched');
                 matchedPairs++;
-                pairsDisplay.innerText = `${matchedPairs}/8`;
+                document.getElementById('pairs-count').innerText = `${matchedPairs}/8`;
                 flippedCards = [];
                 if (matchedPairs === 8) endGame();
             } else {
+                // 틀렸을 때
                 canClick = false;
                 setTimeout(() => {
                     c1.classList.remove('flipped');
                     c2.classList.remove('flipped');
                     flippedCards = [];
                     misses++;
-                    missDisplay.innerText = misses;
+                    document.getElementById('miss-count').innerText = misses;
                     canClick = true;
                 }, 800);
             }
         }
 
         function endGame() {
-            canClick = false;
             setTimeout(() => {
-                overlay.style.display = 'block';
-                document.getElementById('final-miss').innerText = misses;
+                document.getElementById('overlay').style.display = 'flex';
+                document.getElementById('modal-title').innerText = "CLEAR!";
+                document.getElementById('modal-desc').innerText = `실수 횟수: ${misses}회`;
+                document.getElementById('start-btn').innerText = "다시 도전";
             }, 500);
         }
-
-        initGame();
     </script>
 </body>
 </html>
